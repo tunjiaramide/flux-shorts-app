@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { Video, ResizeMode } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ArrowLeft, Play, Maximize } from 'lucide-react-native';
+import { useState } from 'react';
 
 const recentVideos = [
   { id: '4', title: 'Lockdown', duration: '14:59', thumbnail: 'https://images.pexels.com/photos/3844464/pexels-photo-3844464.jpeg' },
@@ -14,6 +16,13 @@ const recentVideos = [
 
 export default function VideoPlayerScreen() {
   const { id, title } = useLocalSearchParams<{ id: string; title: string }>();
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
+
+  const handlePlayPress = () => {
+    setShowVideo(true);
+    setIsPlaying(true);
+  };
 
   const navigateToVideo = (videoId: string, videoTitle: string) => {
     router.push({
@@ -37,18 +46,31 @@ export default function VideoPlayerScreen() {
           </View>
 
           <View style={styles.videoPlayer}>
-            <Image 
-              source={{ uri: 'https://images.pexels.com/photos/4100130/pexels-photo-4100130.jpeg' }} 
-              style={styles.videoBackground}
-            />
-            <View style={styles.playerControls}>
-              <TouchableOpacity style={styles.playButton}>
-                <Play size={40} color="#ffffff" fill="#ffffff" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.fullscreenButton}>
-                <Maximize size={20} color="#ffffff" />
-              </TouchableOpacity>
-            </View>
+            {showVideo ? (
+              <Video
+                source={{ uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' }}
+                style={styles.video}
+                useNativeControls
+                resizeMode={ResizeMode.CONTAIN}
+                isLooping
+                shouldPlay={isPlaying}
+              />
+            ) : (
+              <>
+                <Image 
+                  source={{ uri: 'https://images.pexels.com/photos/4100130/pexels-photo-4100130.jpeg' }} 
+                  style={styles.videoBackground}
+                />
+                <View style={styles.playerControls}>
+                  <TouchableOpacity style={styles.playButton} onPress={handlePlayPress}>
+                    <Play size={40} color="#ffffff" fill="#ffffff" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.fullscreenButton}>
+                    <Maximize size={20} color="#ffffff" />
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -116,6 +138,10 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  video: {
+    width: '100%',
+    height: '100%',
   },
   playerControls: {
     position: 'absolute',
