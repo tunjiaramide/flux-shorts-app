@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +19,8 @@ export default function LoginScreen() {
   };
 
   return (
+    <>
+      <StatusBar barStyle="light-content" backgroundColor="#7c2d12" />
     <LinearGradient
       colors={['#7c2d12', '#451a03']}
       style={styles.container}
@@ -73,6 +75,7 @@ export default function LoginScreen() {
         </View>
       </SafeAreaView>
     </LinearGradient>
+    </>
   );
 }
 

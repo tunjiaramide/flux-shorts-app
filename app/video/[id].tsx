@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { Video, ResizeMode } from 'expo-av';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, StatusBar } from 'react-native';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Play, Maximize } from 'lucide-react-native';
-import { useState } from 'react';
+import CustomFooter from '@/components/CustomFooter';
 
 const recentVideos = [
   { id: '4', title: 'Lockdown', duration: '14:59', thumbnail: 'https://images.pexels.com/photos/3844464/pexels-photo-3844464.jpeg' },
@@ -14,89 +14,144 @@ const recentVideos = [
   { id: '7', title: 'Silent Film', duration: '10:05', thumbnail: 'https://images.pexels.com/photos/3844464/pexels-photo-3844464.jpeg' },
 ];
 
-export default function VideoPlayerScreen() {
-  const { id, title } = useLocalSearchParams<{ id: string; title: string }>();
+export default function VideoScreen() {
+  const { id, title } = useLocalSearchParams();
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showVideo, setShowVideo] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  const player = useVideoPlayer('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', player => {
+    player.loop = true;
+    player.muted = false;
+  });
 
-  const handlePlayPress = () => {
-    setShowVideo(true);
-    setIsPlaying(true);
+  const handleFullscreenPress = async () => {
+    if (player) {
+      try {
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+        setIsFullscreen(true);
+        await player.enterFullscreen();
+      } catch (error) {
+        console.log('Fullscreen error:', error);
+      }
+    }
   };
 
+  // Stop video when navigating away or component unmounts
+  useFocusEffect(
+    React.useCallback(() => {
+      return () => {
+        // This runs when the screen loses focus
+        if (player) {
+          player.pause();
+        }
+        setIsPlaying(false);
+      };
+    }, [player])
+  );
+
+  // Also stop video when component unmounts
+  useEffect(() => {
+    return () => {
+      if (player) {
+        player.release();
+      }
+    };
+  }, [player]);
+
   const navigateToVideo = (videoId: string, videoTitle: string) => {
+    // Stop current video before navigating
+    if (player) {
+      player.pause();
+    }
+    setIsPlaying(false);
+    
     router.push({
       pathname: '/video/[id]',
       params: { id: videoId, title: videoTitle }
     });
   };
 
-  return (
-    <LinearGradient
-      colors={['#7c2d12', '#1a1a1a']}
-      style={styles.container}
-    >
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ArrowLeft size={24} color="#ffffff" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>{title || 'Video Player'}</Text>
-          </View>
+  const handlePlayPress = () => {
+    player.play();
+    setIsPlaying(true);
+  };
 
-          <View style={styles.videoPlayer}>
-            {showVideo ? (
-              <Video
-                source={{ uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' }}
-                style={styles.video}
-                useNativeControls
-                resizeMode={ResizeMode.CONTAIN}
-                isLooping
-                shouldPlay={isPlaying}
-              />
-            ) : (
-              <>
-                <Image 
-                  source={{ uri: 'https://images.pexels.com/photos/4100130/pexels-photo-4100130.jpeg' }} 
-                  style={styles.videoBackground}
-                />
-                <View style={styles.playerControls}>
-                  <TouchableOpacity style={styles.playButton} onPress={handlePlayPress}>
-                    <Play size={40} color="#ffffff" fill="#ffffff" />
-                  </TouchableOpacity>
+  return (
+    <>
+      <StatusBar barStyle="light-content" backgroundColor="#7c2d12" />
+      <LinearGradient
+        colors={['#7c2d12', '#1a1a1a']}
+        style={styles.container}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <ScrollView 
+            style={styles.scrollView} 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <ArrowLeft size={24} color="#ffffff" />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>{title || 'Video'}</Text>
+            </View>
+
+            <View style={styles.videoPlayer}>
+              {!isPlaying ? (
+                <TouchableOpacity style={styles.thumbnailContainer} onPress={handlePlayPress}>
+                  <Image 
+                    source={{ uri: 'https://images.pexels.com/photos/3844788/pexels-photo-3844788.jpeg' }} 
+                    style={styles.thumbnail} 
+                  />
+                  <View style={styles.playButtonContainer}>
+                    <View style={styles.playButton}>
+                      <Play size={32} color="#ffffff" fill="#ffffff" />
+                    </View>
+                  </View>
                   <TouchableOpacity style={styles.fullscreenButton}>
                     <Maximize size={20} color="#ffffff" />
                   </TouchableOpacity>
-                </View>
-              </>
-            )}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Latest Videos</Text>
-            <View style={styles.videoGrid}>
-              {recentVideos.map((video) => (
-                <TouchableOpacity
-                  key={video.id}
-                  style={styles.gridItem}
-                  onPress={() => navigateToVideo(video.id, video.title)}
-                >
-                  <Image source={{ uri: video.thumbnail }} style={styles.gridImage} />
-                  <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.9)']}
-                    style={styles.gridOverlay}
-                  >
-                    <Text style={styles.gridTitle}>{video.title}</Text>
-                    <Text style={styles.gridDuration}>{video.duration}</Text>
-                  </LinearGradient>
                 </TouchableOpacity>
-              ))}
+              ) : (
+                <View style={styles.videoContainer}>
+                  <VideoView
+                    style={isFullscreen ? styles.fullscreenVideo : styles.video}
+                    player={player}
+                    allowsFullscreen
+                    allowsPictureInPicture
+                    contentFit="contain"
+                    showsTimecodes
+                  />
+                </View>
+              )}
             </View>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </LinearGradient>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Latest Videos</Text>
+              <View style={styles.videoGrid}>
+                {recentVideos.map((video) => (
+                  <TouchableOpacity
+                    key={video.id}
+                    style={styles.gridItem}
+                    onPress={() => navigateToVideo(video.id, video.title)}
+                  >
+                    <Image source={{ uri: video.thumbnail }} style={styles.gridImage} />
+                    <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.9)']}
+                      style={styles.gridOverlay}
+                    >
+                      <Text style={styles.gridTitle}>{video.title}</Text>
+                      <Text style={styles.gridDuration}>{video.duration}</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+          <CustomFooter />
+        </SafeAreaView>
+      </LinearGradient>
+    </>
   );
 }
 
@@ -109,6 +164,9 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
@@ -132,18 +190,18 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderRadius: 12,
     overflow: 'hidden',
+    backgroundColor: '#000000',
+  },
+  thumbnailContainer: {
+    flex: 1,
     position: 'relative',
   },
-  videoBackground: {
+  thumbnail: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
-  video: {
-    width: '100%',
-    height: '100%',
-  },
-  playerControls: {
+  playButtonContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -151,19 +209,39 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   playButton: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 50,
-    padding: 16,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingLeft: 4, // Slight offset for play icon visual balance
   },
   fullscreenButton: {
     position: 'absolute',
-    bottom: 16,
-    right: 16,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 8,
-    padding: 8,
+    bottom: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoContainer: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  video: {
+    flex: 1,
+  },
+  fullscreenVideo: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
   section: {
     paddingHorizontal: 20,

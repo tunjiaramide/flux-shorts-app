@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings, LogOut, ChevronRight } from 'lucide-react-native';
 import { router } from 'expo-router';
+import CustomFooter from '@/components/CustomFooter';
 
 export default function ProfileScreen() {
   const handleLogout = () => {
@@ -15,7 +16,8 @@ export default function ProfileScreen() {
       colors={['#7c2d12', '#1a1a1a']}
       style={styles.container}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.content}>
         <Text style={styles.appTitle}>FluxShorts</Text>
         
         <View style={styles.profileSection}>
@@ -41,6 +43,8 @@ export default function ProfileScreen() {
             <ChevronRight size={20} color="#6b7280" />
           </TouchableOpacity>
         </View>
+        </View>
+        <CustomFooter />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -52,7 +56,11 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  content: {
+    flex: 1,
     paddingHorizontal: 20,
+    paddingBottom: 20, // Reduced since tab bar is no longer absolute
   },
   appTitle: {
     fontSize: 24,

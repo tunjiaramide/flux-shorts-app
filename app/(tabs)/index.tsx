@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'rea
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import CustomFooter from '@/components/CustomFooter';
 
 const featuredVideo = {
   id: '1',
@@ -36,7 +37,11 @@ export default function HomeScreen() {
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.scrollView} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           <Text style={styles.appTitle}>FluxShorts</Text>
           
           <View style={styles.section}>
@@ -98,6 +103,7 @@ export default function HomeScreen() {
             </View>
           </View>
         </ScrollView>
+        <CustomFooter />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -112,6 +118,9 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20, // Reduced since tab bar is no longer absolute
   },
   appTitle: {
     fontSize: 24,
