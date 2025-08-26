@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, LogOut, ChevronRight } from 'lucide-react-native';
+import { LogOut, ChevronRight } from 'lucide-react-native';
 import { router } from 'expo-router';
 import CustomFooter from '@/components/CustomFooter';
 
@@ -27,14 +27,6 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.menuSection}>
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <Settings size={20} color="#f59e0b" />
-              <Text style={styles.menuItemText}>Account Settings</Text>
-            </View>
-            <ChevronRight size={20} color="#6b7280" />
-          </TouchableOpacity>
-
           <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
             <View style={styles.menuItemLeft}>
               <LogOut size={20} color="#f59e0b" />
