@@ -52,7 +52,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingBottom: 20, // Reduced since tab bar is no longer absolute
   },
   appTitle: {
     fontSize: 24,
