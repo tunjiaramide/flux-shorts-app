@@ -52,7 +52,7 @@ export default function HomeScreen() {
         colors={['#7c2d12', '#1a1a1a']}
         style={styles.container}
       >
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={[styles.safeArea, { paddingBottom: 0 }]} edges={['top', 'left', 'right']}>
           <View style={styles.loadingContainer}>
             <Text style={styles.appTitle}>FluxShorts</Text>
             <ActivityIndicator size="large" color="#fbbf24" />
