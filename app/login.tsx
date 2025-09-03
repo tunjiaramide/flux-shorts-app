@@ -28,7 +28,7 @@ export default function LoginScreen() {
                     <Text style={styles.googleIconText}>G</Text>
                   </View>
                 </View>
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
+                <Text style={styles.googleButtonText}>Login as a Guest</Text>
               </TouchableOpacity>
             </View>
           </View>

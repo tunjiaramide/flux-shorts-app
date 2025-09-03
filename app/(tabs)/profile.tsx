@@ -22,8 +22,8 @@ export default function ProfileScreen() {
         
         <View style={styles.profileSection}>
           <View style={styles.avatar} />
-          <Text style={styles.userName}>Victor Aluko</Text>
-          <Text style={styles.userEmail}>victor.aluko@example.com</Text>
+          <Text style={styles.userName}>Welcome Guest</Text>
+          <Text style={styles.userEmail}>guest@welcome.com</Text>
         </View>
 
         <View style={styles.menuSection}>
