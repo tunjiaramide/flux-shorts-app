@@ -2,6 +2,10 @@ import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 
+export default function RootLayout() {
+  const { hideSplash } = useFrameworkReady();
+
+  useEffect(() => {
 // Prevent the splash screen from auto-hiding before asset loading is complete
         // Just prepare the app without checking auth state
         // Let the login page handle authentication flow
