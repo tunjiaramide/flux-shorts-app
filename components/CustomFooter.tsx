@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#333333',
     paddingTop: 16,
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: 18,
   },
   footerTab: {
     flex: 1,
