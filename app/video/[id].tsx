@@ -148,11 +148,11 @@ export default function VideoScreen() {
         colors={['#7c2d12', '#1a1a1a']}
         style={styles.container}
       >
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
           <ScrollView 
             style={styles.scrollView} 
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 0 }]}
           >
             <View style={styles.header}>
               <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    flexGrow: 1,
   },
   header: {
     flexDirection: 'row',

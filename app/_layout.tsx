@@ -7,9 +7,7 @@ import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 
 export default function RootLayout() {
   useEffect(() => {
-    if (Platform.OS === 'android') {
-      NavigationBar.setBackgroundColorAsync('#1a1a1a');
-    }
+    // Remove the navigation bar color setting since it's not supported with edge-to-edge
   }, []);
 
   useFrameworkReady();
