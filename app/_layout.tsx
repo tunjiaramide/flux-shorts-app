@@ -1,8 +1,17 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar'
+import * as NavigationBar from 'expo-navigation-bar';
+import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 
 export default function RootLayout() {
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setBackgroundColorAsync('#1a1a1a');
+    }
+  }, []);
+
   useFrameworkReady();
   return (
     <>
