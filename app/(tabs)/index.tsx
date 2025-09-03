@@ -73,7 +73,7 @@ export default function HomeScreen() {
         <ScrollView 
           style={styles.scrollView} 
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 0 }]}
         >
           <Text style={styles.appTitle}>FluxShorts</Text>
           

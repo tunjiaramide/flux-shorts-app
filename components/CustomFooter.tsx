@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { House, User } from 'lucide-react-native';
 import { router, usePathname } from 'expo-router';
@@ -12,13 +12,7 @@ export default function CustomFooter() {
   const isProfileActive = pathname === '/(tabs)/profile' || pathname === '/profile';
 
   return (
-    <View style={[
-      styles.footer, 
-      { 
-        paddingBottom: Math.max(insets.bottom, 12),
-        marginBottom: Platform.OS === 'android' ? 0 : 0,
-      }
-    ]}>
+    <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
       <TouchableOpacity 
         style={styles.footerTab}
         onPress={() => router.push('/(tabs)')}
@@ -59,12 +53,12 @@ export default function CustomFooter() {
 const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
-    backgroundColor: '#000000',
+    backgroundColor: '#1a1a1a',
     borderTopWidth: 1,
-    borderTopColor: '#1f1f1f',
-    paddingTop: 12,
+    borderTopColor: '#333333',
+    paddingTop: 16,
     paddingHorizontal: 20,
-    minHeight: 70,
+    paddingBottom: 16,
   },
   footerTab: {
     flex: 1,
