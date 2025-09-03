@@ -4,7 +4,7 @@
     "slug": "fluxshorts",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icon4.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
+        "foregroundImage": "./assets/images/icon4.png",
         "backgroundColor": "#7c2d12"
       }
     },
@@ -23,7 +23,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/icon4.png",
       "resizeMode": "contain",
       "backgroundColor": "#7c2d12"
     },
