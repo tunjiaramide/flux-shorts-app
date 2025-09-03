@@ -8,7 +8,7 @@ import CustomFooter from '@/components/CustomFooter';
 
 export default function ProfileScreen() {
   const handleLogout = () => {
-    router.replace('/');
+    router.replace('/login');
   };
 
   return (
