@@ -1,22 +1,11 @@
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Platform } from 'react-native';
-import * as SplashScreen from 'expo-splash-screen';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete
-SplashScreen.preventAutoHideAsync();
+        // Just prepare the app without checking auth state
+        // Let the login page handle authentication flow
 
-export default function RootLayout() {
-  useFrameworkReady();
-
-  useEffect(() => {
-    const hideSplash = async () => {
-      // Small delay to ensure everything is loaded
-      await new Promise(resolve => setTimeout(resolve, 500));
-      SplashScreen.hideAsync();
-    };
 
     hideSplash();
   }, []);
@@ -28,14 +17,20 @@ export default function RootLayout() {
           headerShown: false,
           contentStyle: { backgroundColor: '#000000' }
         }}
+        initialRouteName="login"
       >
+        <Stack.Screen 
+          name="login" 
+          options={{ 
+            headerShown: false 
+          }} 
+        />
         <Stack.Screen 
           name="(tabs)" 
           options={{ 
             headerShown: false 
           }} 
         />
-        <Stack.Screen name="login" />
         <Stack.Screen 
           name="video/[id]" 
           options={{ 
