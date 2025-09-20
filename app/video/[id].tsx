@@ -22,7 +22,7 @@ export default function VideoScreen() {
   const [recentMovies, setRecentMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const player = useVideoPlayer(videoUrl as string, player => {
+  const player = useVideoPlayer(videoUrl as string, (player) => {
     player.loop = true;
     player.muted = false;
     player.addListener('statusChange', (status) => {
@@ -49,19 +49,23 @@ export default function VideoScreen() {
     }
   };
 
+  // 🔹 Enter fullscreen manually
   const handleFullscreenPress = async () => {
     try {
-      if (isFullscreen) {
-        // Exit fullscreen → portrait
-        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-        setIsFullscreen(false);
-      } else {
-        // Enter fullscreen → landscape
-        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-        setIsFullscreen(true);
-      }
+      setIsFullscreen(true);
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
     } catch (error) {
-      console.log('Fullscreen toggle error:', error);
+      console.log('Fullscreen error:', error);
+    }
+  };
+
+  // 🔹 Exit fullscreen manually
+  const handleExitFullscreen = async () => {
+    try {
+      setIsFullscreen(false);
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    } catch (error) {
+      console.log('Exit fullscreen error:', error);
     }
   };
 
@@ -69,9 +73,7 @@ export default function VideoScreen() {
     React.useCallback(() => {
       return () => {
         if (player) {
-          try {
-            player.pause();
-          } catch {}
+          try { player.pause(); } catch {}
         }
         setIsPlaying(false);
       };
@@ -81,32 +83,23 @@ export default function VideoScreen() {
   useEffect(() => {
     return () => {
       if (player) {
-        try {
-          player.pause();
-        } catch {}
+        try { player.pause(); } catch {}
       }
     };
   }, [player]);
 
   const handleBackPress = async () => {
     if (player) {
-      try {
-        player.pause();
-      } catch {}
+      try { player.pause(); } catch {}
     }
     setIsPlaying(false);
-
-    // Reset orientation when leaving
     await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-
     router.back();
   };
 
   const navigateToVideo = (movie: Movie) => {
     if (player) {
-      try {
-        player.pause();
-      } catch {}
+      try { player.pause(); } catch {}
     }
     setIsPlaying(false);
     
@@ -127,11 +120,8 @@ export default function VideoScreen() {
     try {
       setVideoError(false);
       setIsPlaying(true);
-
-      // Auto enter fullscreen landscape when play starts
       await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-      setIsFullscreen(true);
-
+      setIsFullscreen(true); // auto fullscreen when play
       player.play();
     } catch (error) {
       console.log('Play error:', error);
@@ -151,6 +141,29 @@ export default function VideoScreen() {
     }
   };
 
+  // 🔹 If fullscreen → only render the video
+  if (isFullscreen) {
+    return (
+      <View style={styles.fullscreenVideo}>
+        <StatusBar hidden />
+        <VideoView
+          style={StyleSheet.absoluteFillObject}
+          player={player}
+          allowsPictureInPicture
+          contentFit="cover"
+          nativeControls
+        />
+        <TouchableOpacity 
+          style={styles.exitFullscreenButton} 
+          onPress={handleExitFullscreen}
+        >
+          <Minimize size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // 🔹 Otherwise render the normal page layout
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="#7c2d12" />
@@ -174,10 +187,7 @@ export default function VideoScreen() {
             <View style={styles.videoPlayer}>
               {videoError ? (
                 <View style={styles.errorContainer}>
-                  <Image 
-                    source={{ uri: thumbnailUrl as string }} 
-                    style={styles.thumbnail} 
-                  />
+                  <Image source={{ uri: thumbnailUrl as string }} style={styles.thumbnail} />
                   <View style={styles.errorOverlay}>
                     <Text style={styles.errorText}>Video playback error</Text>
                     <TouchableOpacity style={styles.retryButton} onPress={handleRetryVideo}>
@@ -187,49 +197,33 @@ export default function VideoScreen() {
                 </View>
               ) : !isPlaying ? (
                 <TouchableOpacity style={styles.thumbnailContainer} onPress={handlePlayPress}>
-                  <Image 
-                    source={{ uri: thumbnailUrl as string }} 
-                    style={styles.thumbnail} 
-                  />
+                  <Image source={{ uri: thumbnailUrl as string }} style={styles.thumbnail} />
                   <View style={styles.playButtonContainer}>
                     <View style={styles.playButton}>
                       <Play size={32} color="#ffffff" fill="#ffffff" />
                     </View>
                   </View>
                   <TouchableOpacity style={styles.fullscreenButton} onPress={handleFullscreenPress}>
-                    {isFullscreen ? (
-                      <Minimize size={20} color="#ffffff" />
-                    ) : (
-                      <Maximize size={20} color="#ffffff" />
-                    )}
+                    <Maximize size={20} color="#ffffff" />
                   </TouchableOpacity>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.videoContainer}>
                   <VideoView
-                    style={isFullscreen ? styles.fullscreenVideo : styles.video}
+                    style={styles.video}
                     player={player}
                     allowsPictureInPicture
                     contentFit="cover"
                     showsTimecodes
-                    nativeControls={true}
+                    nativeControls
                   />
-                  <TouchableOpacity style={styles.fullscreenButton} onPress={handleFullscreenPress}>
-                    {isFullscreen ? (
-                      <Minimize size={20} color="#ffffff" />
-                    ) : (
-                      <Maximize size={20} color="#ffffff" />
-                    )}
-                  </TouchableOpacity>
                 </View>
               )}
             </View>
 
             <View style={styles.movieInfo}>
               <Text style={styles.movieTitle}>{title}</Text>
-              <Text style={styles.movieMeta}>
-                {genre} • {year}
-              </Text>
+              <Text style={styles.movieMeta}>{genre} • {year}</Text>
             </View>
 
             {loading ? (
@@ -277,111 +271,35 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   scrollView: { flex: 1 },
   scrollContent: { flexGrow: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 16,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 16, gap: 16 },
   backButton: { padding: 4 },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fbbf24',
-    flex: 1,
-  },
-  videoPlayer: {
-    height: 240,
-    marginHorizontal: 16,
-    marginBottom: 24,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#000000',
-  },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fbbf24', flex: 1 },
+  videoPlayer: { height: 240, marginHorizontal: 16, marginBottom: 24, borderRadius: 12, overflow: 'hidden', backgroundColor: '#000' },
   thumbnailContainer: { flex: 1, position: 'relative' },
   thumbnail: { width: '100%', height: '100%', resizeMode: 'cover' },
-  playButtonContainer: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-  playButton: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingLeft: 4,
-  },
-  fullscreenButton: {
-    position: 'absolute',
-    bottom: 12, right: 12,
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  videoContainer: { flex: 1, backgroundColor: '#000000' },
+  playButtonContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
+  playButton: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', paddingLeft: 4 },
+  fullscreenButton: { position: 'absolute', bottom: 12, right: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' },
+  videoContainer: { flex: 1, backgroundColor: '#000' },
   video: { flex: 1 },
-  fullscreenVideo: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
-  },
+  fullscreenVideo: { flex: 1, backgroundColor: '#000' },
+  exitFullscreenButton: { position: 'absolute', top: 40, right: 20, backgroundColor: 'rgba(0,0,0,0.6)', padding: 10, borderRadius: 20 },
   movieInfo: { paddingHorizontal: 16, marginBottom: 24 },
-  movieTitle: {
-    fontSize: 24, fontWeight: 'bold',
-    color: '#ffffff', marginBottom: 8,
-  },
+  movieTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
   movieMeta: { fontSize: 16, color: '#d1d5db' },
-  loadingSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-    gap: 12,
-  },
-  loadingText: { color: '#ffffff', fontSize: 14 },
+  loadingSection: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 12 },
+  loadingText: { color: '#fff', fontSize: 14 },
   section: { paddingHorizontal: 16, marginBottom: 24 },
-  sectionTitle: {
-    fontSize: 20, fontWeight: 'bold',
-    color: '#ffffff', marginBottom: 16,
-  },
+  sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 16 },
   videoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  gridItem: {
-    width: '48%', height: 140,
-    borderRadius: 12, overflow: 'hidden',
-    marginBottom: 12,
-  },
+  gridItem: { width: '48%', height: 140, borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
   gridImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  gridOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 12, paddingVertical: 8,
-  },
-  gridTitle: {
-    color: '#ffffff', fontSize: 14,
-    fontWeight: '600', marginBottom: 2,
-  },
+  gridOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 12, paddingVertical: 8 },
+  gridTitle: { color: '#fff', fontSize: 14, fontWeight: '600', marginBottom: 2 },
   gridMeta: { color: '#d1d5db', fontSize: 12 },
   errorContainer: { flex: 1, position: 'relative' },
-  errorOverlay: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    justifyContent: 'center', alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.7)', gap: 12,
-  },
-  errorText: {
-    color: '#ffffff', fontSize: 16, fontWeight: '600',
-  },
-  retryButton: {
-    backgroundColor: '#ff6b35',
-    paddingHorizontal: 20, paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#ffffff', fontSize: 14, fontWeight: '600',
-  },
+  errorOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', gap: 12 },
+  errorText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  retryButton: { backgroundColor: '#ff6b35', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  retryButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
 });
