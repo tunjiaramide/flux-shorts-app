@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
+import { 
+  View, Text, ScrollView, TouchableOpacity, Image, 
+  StyleSheet, StatusBar, ActivityIndicator 
+} from 'react-native';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft, Play, Maximize } from 'lucide-react-native';
+import { ArrowLeft, Play, Maximize, Minimize } from 'lucide-react-native';
 import CustomFooter from '@/components/CustomFooter';
 import { movieService } from '@/services/movieService';
 import { Movie } from '@/types/movie';
@@ -46,13 +50,18 @@ export default function VideoScreen() {
   };
 
   const handleFullscreenPress = async () => {
-    if (player) {
-      try {
+    try {
+      if (isFullscreen) {
+        // Exit fullscreen → portrait
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+        setIsFullscreen(false);
+      } else {
+        // Enter fullscreen → landscape
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
         setIsFullscreen(true);
-        await player.enterFullscreen();
-      } catch (error) {
-        console.log('Fullscreen error:', error);
       }
+    } catch (error) {
+      console.log('Fullscreen toggle error:', error);
     }
   };
 
@@ -62,9 +71,7 @@ export default function VideoScreen() {
         if (player) {
           try {
             player.pause();
-          } catch (error) {
-            // Ignore errors if player is already released
-          }
+          } catch {}
         }
         setIsPlaying(false);
       };
@@ -76,22 +83,22 @@ export default function VideoScreen() {
       if (player) {
         try {
           player.pause();
-        } catch (error) {
-          // Ignore errors if player is already released
-        }
+        } catch {}
       }
     };
   }, [player]);
 
-  const handleBackPress = () => {
+  const handleBackPress = async () => {
     if (player) {
       try {
         player.pause();
-      } catch (error) {
-        // Ignore errors if player is already released
-      }
+      } catch {}
     }
     setIsPlaying(false);
+
+    // Reset orientation when leaving
+    await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+
     router.back();
   };
 
@@ -99,9 +106,7 @@ export default function VideoScreen() {
     if (player) {
       try {
         player.pause();
-      } catch (error) {
-        // Ignore errors if player is already released
-      }
+      } catch {}
     }
     setIsPlaying(false);
     
@@ -118,11 +123,16 @@ export default function VideoScreen() {
     });
   };
 
-  const handlePlayPress = () => {
+  const handlePlayPress = async () => {
     try {
       setVideoError(false);
-      player.play();
       setIsPlaying(true);
+
+      // Auto enter fullscreen landscape when play starts
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      setIsFullscreen(true);
+
+      player.play();
     } catch (error) {
       console.log('Play error:', error);
       setVideoError(true);
@@ -187,7 +197,11 @@ export default function VideoScreen() {
                     </View>
                   </View>
                   <TouchableOpacity style={styles.fullscreenButton} onPress={handleFullscreenPress}>
-                    <Maximize size={20} color="#ffffff" />
+                    {isFullscreen ? (
+                      <Minimize size={20} color="#ffffff" />
+                    ) : (
+                      <Maximize size={20} color="#ffffff" />
+                    )}
                   </TouchableOpacity>
                 </TouchableOpacity>
               ) : (
@@ -195,12 +209,18 @@ export default function VideoScreen() {
                   <VideoView
                     style={isFullscreen ? styles.fullscreenVideo : styles.video}
                     player={player}
-                    allowsFullscreen
                     allowsPictureInPicture
                     contentFit="cover"
                     showsTimecodes
                     nativeControls={true}
                   />
+                  <TouchableOpacity style={styles.fullscreenButton} onPress={handleFullscreenPress}>
+                    {isFullscreen ? (
+                      <Minimize size={20} color="#ffffff" />
+                    ) : (
+                      <Maximize size={20} color="#ffffff" />
+                    )}
+                  </TouchableOpacity>
                 </View>
               )}
             </View>
@@ -253,18 +273,10 @@ export default function VideoScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
+  scrollView: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -272,9 +284,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     gap: 16,
   },
-  backButton: {
-    padding: 4,
-  },
+  backButton: { padding: 4 },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -289,29 +299,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#000000',
   },
-  thumbnailContainer: {
-    flex: 1,
-    position: 'relative',
-  },
-  thumbnail: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
+  thumbnailContainer: { flex: 1, position: 'relative' },
+  thumbnail: { width: '100%', height: '100%', resizeMode: 'cover' },
   playButtonContainer: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: 0, left: 0, right: 0, bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
   playButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 80, height: 80, borderRadius: 40,
     backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -319,41 +317,27 @@ const styles = StyleSheet.create({
   },
   fullscreenButton: {
     position: 'absolute',
-    bottom: 12,
-    right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    bottom: 12, right: 12,
+    width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  videoContainer: {
-    flex: 1,
-    backgroundColor: '#000000',
-  },
-  video: {
-    flex: 1,
-  },
+  videoContainer: { flex: 1, backgroundColor: '#000000' },
+  video: { flex: 1 },
   fullscreenVideo: {
     flex: 1,
     width: '100%',
     height: '100%',
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
   },
-  movieInfo: {
-    paddingHorizontal: 16,
-    marginBottom: 24,
-  },
+  movieInfo: { paddingHorizontal: 16, marginBottom: 24 },
   movieTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 8,
+    fontSize: 24, fontWeight: 'bold',
+    color: '#ffffff', marginBottom: 8,
   },
-  movieMeta: {
-    fontSize: 16,
-    color: '#d1d5db',
-  },
+  movieMeta: { fontSize: 16, color: '#d1d5db' },
   loadingSection: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -361,84 +345,43 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     gap: 12,
   },
-  loadingText: {
-    color: '#ffffff',
-    fontSize: 14,
-  },
-  section: {
-    paddingHorizontal: 16,
-    marginBottom: 24,
-  },
+  loadingText: { color: '#ffffff', fontSize: 14 },
+  section: { paddingHorizontal: 16, marginBottom: 24 },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 16,
+    fontSize: 20, fontWeight: 'bold',
+    color: '#ffffff', marginBottom: 16,
   },
-  videoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
+  videoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   gridItem: {
-    width: '48%',
-    height: 140,
-    borderRadius: 12,
-    overflow: 'hidden',
+    width: '48%', height: 140,
+    borderRadius: 12, overflow: 'hidden',
     marginBottom: 12,
   },
-  gridImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
+  gridImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   gridOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    paddingHorizontal: 12, paddingVertical: 8,
   },
   gridTitle: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 2,
+    color: '#ffffff', fontSize: 14,
+    fontWeight: '600', marginBottom: 2,
   },
-  gridMeta: {
-    color: '#d1d5db',
-    fontSize: 12,
-  },
-  errorContainer: {
-    flex: 1,
-    position: 'relative',
-  },
+  gridMeta: { color: '#d1d5db', fontSize: 12 },
+  errorContainer: { flex: 1, position: 'relative' },
   errorOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    gap: 12,
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    justifyContent: 'center', alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)', gap: 12,
   },
   errorText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: '#ffffff', fontSize: 16, fontWeight: '600',
   },
   retryButton: {
     backgroundColor: '#ff6b35',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 20, paddingVertical: 10,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
+    color: '#ffffff', fontSize: 14, fontWeight: '600',
   },
 });
