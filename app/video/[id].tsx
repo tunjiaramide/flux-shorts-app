@@ -71,11 +71,17 @@ export default function VideoScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      // When screen is focused → nothing special
       return () => {
+        // When screen is unfocused (navigating back or away) → cleanup
         if (player) {
           try { player.pause(); } catch {}
         }
         setIsPlaying(false);
+        setIsFullscreen(false);
+
+        // 🔹 Always restore portrait mode
+        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
       };
     }, [player])
   );
@@ -85,6 +91,11 @@ export default function VideoScreen() {
       if (player) {
         try { player.pause(); } catch {}
       }
+      setIsPlaying(false);
+      setIsFullscreen(false);
+
+      // 🔹 Force portrait when component unmounts
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
     };
   }, [player]);
 
