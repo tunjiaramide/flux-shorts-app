@@ -1,7 +1,15 @@
+// VideoScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { 
-  View, Text, ScrollView, TouchableOpacity, Image, 
-  StyleSheet, StatusBar, ActivityIndicator 
+import {
+  View,
+  Text,
+  Modal,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+  StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { VideoView, useVideoPlayer } from 'expo-video';
@@ -14,6 +22,9 @@ import CustomFooter from '@/components/CustomFooter';
 import { movieService } from '@/services/movieService';
 import { Movie } from '@/types/movie';
 
+import { isPaidUser } from '@/config/subscription';
+import { useEventListener } from 'expo'; // <-- event hook for player events
+
 export default function VideoScreen() {
   const { id, title, videoUrl, thumbnailUrl, genre, year } = useLocalSearchParams();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -21,17 +32,48 @@ export default function VideoScreen() {
   const [videoError, setVideoError] = useState(false);
   const [recentMovies, setRecentMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
+  // paywall state + guard so it fires only once
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallTriggered, setPaywallTriggered] = useState(false);
+
+  const isPaidUser = false; // 🔹 test toggle
+
+  // create player and configure it
   const player = useVideoPlayer(videoUrl as string, (player) => {
     player.loop = true;
     player.muted = false;
-    player.addListener('statusChange', (status) => {
-      if (status.error) {
-        console.log('Video error:', status.error);
+    player.timeUpdateEventInterval = 1;
+
+    player.addListener("statusChange", (status: any) => {
+      if (status?.error) {
+        console.log("Video error:", status.error);
         setVideoError(true);
         setIsPlaying(false);
       }
     });
+  });
+
+  // ⏳ enforce paywall at 45s
+  useEventListener(player, "timeUpdate", (evt: any) => {
+    const seconds =
+      typeof evt?.currentTime === "number"
+        ? evt.currentTime
+        : typeof evt?.positionMillis === "number"
+        ? evt.positionMillis / 1000
+        : typeof evt?.position === "number"
+        ? evt.position
+        : null;
+
+    if (seconds !== null && seconds >= 45 && !isPaidUser && !paywallTriggered) {
+      setPaywallTriggered(true);
+      try {
+        player.pause();
+      } catch (e) {
+        console.log("Error pausing player for paywall:", e);
+      }
+      setShowPaywall(true);
+    }
   });
 
   useEffect(() => {
@@ -43,44 +85,40 @@ export default function VideoScreen() {
       const movies = await movieService.getMoviesByGenre(genre as string, id as string);
       setRecentMovies(movies);
     } catch (error) {
-      console.error('Error loading recent movies:', error);
+      console.error("Error loading recent movies:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔹 Enter fullscreen manually
   const handleFullscreenPress = async () => {
     try {
       setIsFullscreen(true);
       await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
     } catch (error) {
-      console.log('Fullscreen error:', error);
+      console.log("Fullscreen error:", error);
     }
   };
 
-  // 🔹 Exit fullscreen manually
   const handleExitFullscreen = async () => {
     try {
       setIsFullscreen(false);
       await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
     } catch (error) {
-      console.log('Exit fullscreen error:', error);
+      console.log("Exit fullscreen error:", error);
     }
   };
 
   useFocusEffect(
     React.useCallback(() => {
-      // When screen is focused → nothing special
       return () => {
-        // When screen is unfocused (navigating back or away) → cleanup
         if (player) {
-          try { player.pause(); } catch {}
+          try {
+            player.pause();
+          } catch {}
         }
         setIsPlaying(false);
         setIsFullscreen(false);
-
-        // 🔹 Always restore portrait mode
         ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
       };
     }, [player])
@@ -89,19 +127,21 @@ export default function VideoScreen() {
   useEffect(() => {
     return () => {
       if (player) {
-        try { player.pause(); } catch {}
+        try {
+          player.pause();
+        } catch {}
       }
       setIsPlaying(false);
       setIsFullscreen(false);
-
-      // 🔹 Force portrait when component unmounts
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
     };
   }, [player]);
 
   const handleBackPress = async () => {
     if (player) {
-      try { player.pause(); } catch {}
+      try {
+        player.pause();
+      } catch {}
     }
     setIsPlaying(false);
     await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
@@ -110,20 +150,22 @@ export default function VideoScreen() {
 
   const navigateToVideo = (movie: Movie) => {
     if (player) {
-      try { player.pause(); } catch {}
+      try {
+        player.pause();
+      } catch {}
     }
     setIsPlaying(false);
-    
+
     router.push({
-      pathname: '/video/[id]',
-      params: { 
-        id: movie.id, 
+      pathname: "/video/[id]",
+      params: {
+        id: movie.id,
         title: movie.title,
         videoUrl: movie.videoUrl,
         thumbnailUrl: movie.thumbnailUrl,
         genre: movie.metadata.genre,
-        year: movie.metadata.year.toString()
-      }
+        year: movie.metadata.year.toString(),
+      },
     });
   };
 
@@ -132,10 +174,10 @@ export default function VideoScreen() {
       setVideoError(false);
       setIsPlaying(true);
       await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-      setIsFullscreen(true); // auto fullscreen when play
+      setIsFullscreen(true);
       player.play();
     } catch (error) {
-      console.log('Play error:', error);
+      console.log("Play error:", error);
       setVideoError(true);
       setIsPlaying(false);
     }
@@ -147,12 +189,12 @@ export default function VideoScreen() {
       setIsPlaying(false);
       player.replay();
     } catch (error) {
-      console.log('Retry error:', error);
+      console.log("Retry error:", error);
       setVideoError(true);
     }
   };
 
-  // 🔹 If fullscreen → only render the video
+  // 🔹 Fullscreen-only render
   if (isFullscreen) {
     return (
       <View style={styles.fullscreenVideo}>
@@ -162,29 +204,53 @@ export default function VideoScreen() {
           player={player}
           allowsPictureInPicture
           contentFit="cover"
-          nativeControls
+          nativeControls={!showPaywall} // disable controls when paywall active
         />
-        <TouchableOpacity 
-          style={styles.exitFullscreenButton} 
-          onPress={handleExitFullscreen}
-        >
-          <Minimize size={24} color="#fff" />
-        </TouchableOpacity>
+
+        {!showPaywall && (
+          <TouchableOpacity
+            style={styles.exitFullscreenButton}
+            onPress={handleExitFullscreen}
+          >
+            <Minimize size={24} color="#fff" />
+          </TouchableOpacity>
+        )}
+
+        {/* ✅ Paywall overlays fullscreen */}
+        {showPaywall && (
+          <Modal visible transparent animationType="fade">
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalBox}>
+                <Text style={styles.modalTitle}>Subscribe to Continue</Text>
+                <Text style={styles.modalText}>
+                  You’ve watched 45 seconds. Unlock full access by subscribing.
+                </Text>
+
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: "#1d4ed8", marginBottom: 12 }]}
+                  onPress={() => {
+                    setShowPaywall(false);
+                    router.push("/subscribe");
+                  }}
+                >
+                  <Text style={styles.modalButtonText}>Subscribe Now</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        )}
       </View>
     );
   }
 
-  // 🔹 Otherwise render the normal page layout
+  // Normal page render
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="#7c2d12" />
-      <LinearGradient
-        colors={['#7c2d12', '#1a1a1a']}
-        style={styles.container}
-      >
+      <LinearGradient colors={['#7c2d12', '#1a1a1a']} style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-          <ScrollView 
-            style={styles.scrollView} 
+          <ScrollView
+            style={styles.scrollView}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[styles.scrollContent, { paddingBottom: 0 }]}
           >
@@ -254,10 +320,7 @@ export default function VideoScreen() {
                         onPress={() => navigateToVideo(movie)}
                       >
                         <Image source={{ uri: movie.thumbnailUrl }} style={styles.gridImage} />
-                        <LinearGradient
-                          colors={['transparent', 'rgba(0,0,0,0.9)']}
-                          style={styles.gridOverlay}
-                        >
+                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={styles.gridOverlay}>
                           <Text style={styles.gridTitle}>{movie.title}</Text>
                           <Text style={styles.gridMeta}>
                             {movie.metadata.genre} • {movie.metadata.year}
@@ -273,6 +336,37 @@ export default function VideoScreen() {
           <CustomFooter />
         </SafeAreaView>
       </LinearGradient>
+
+      {/* ✅ Paywall for portrait view too */}
+      {showPaywall && (
+        <Modal visible transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>Subscribe to Continue</Text>
+              <Text style={styles.modalText}>
+                You’ve watched 45 seconds. Unlock full access by subscribing.
+              </Text>
+
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: "#1d4ed8", marginBottom: 12 }]}
+                onPress={() => {
+                  setShowPaywall(false);
+                  router.push("/subscribe");
+                }}
+              >
+                <Text style={styles.modalButtonText}>Subscribe Now</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: "#6b7280" }]}
+                onPress={() => setShowPaywall(false)}
+              >
+                <Text style={styles.modalButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </>
   );
 }
@@ -285,7 +379,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 16, gap: 16 },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fbbf24', flex: 1 },
-  videoPlayer: { height: 240, marginHorizontal: 16, marginBottom: 24, borderRadius: 12, overflow: 'hidden', backgroundColor: '#000' },
+  videoPlayer: { height: 300, marginHorizontal: 16, marginBottom: 24, borderRadius: 12, overflow: 'hidden', backgroundColor: '#000' },
   thumbnailContainer: { flex: 1, position: 'relative' },
   thumbnail: { width: '100%', height: '100%', resizeMode: 'cover' },
   playButtonContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
@@ -313,4 +407,10 @@ const styles = StyleSheet.create({
   errorText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   retryButton: { backgroundColor: '#ff6b35', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
   retryButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalBox: { backgroundColor: '#fff', borderRadius: 12, padding: 24, width: '100%', maxWidth: 320 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginBottom: 12 },
+  modalText: { fontSize: 14, textAlign: 'center', marginBottom: 20 },
+  modalButton: { borderRadius: 8, paddingVertical: 12 },
+  modalButtonText: { color: '#fff', textAlign: 'center', fontWeight: '600' },
 });
