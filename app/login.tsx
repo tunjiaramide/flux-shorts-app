@@ -1,109 +1,47 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  StatusBar,
-  TextInput,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '@/config/supabase';
+import { supabase } from '@/config/supabase'; // your Supabase config
 
 export default function LoginScreen() {
-  const router = useRouter();
-
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [isLogin, setIsLogin] = useState(true); // toggle between login/register
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [infoMsg, setInfoMsg] = useState<string | null>(null);
-
-  const resetMessages = () => {
-    setErrorMsg(null);
-    setInfoMsg(null);
-  };
+  const [error, setError] = useState('');
 
   const handleAuth = async () => {
-    resetMessages();
-    setLoading(true);
+    setError('');
 
-    if (!email || !password || (mode === 'register' && !name)) {
-      setErrorMsg('Please fill all required fields.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      if (mode === 'login') {
-        // sign in
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          setErrorMsg(error.message);
-          setLoading(false);
-          return;
-        }
-
-        // successful sign in -> navigate into app
-        router.replace('/(tabs)');
+    if (isLogin) {
+      // LOGIN
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setError(error.message);
       } else {
-        // register
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-
-        if (error) {
-          setErrorMsg(error.message);
-          setLoading(false);
-          return;
-        }
-
-        // Try to set user metadata (full name) if session available
-        try {
-          // updateUser will work if session exists; some Supabase projects require email confirmation first.
-          await supabase.auth.updateUser({
-            data: { full_name: name },
-          });
-        } catch (err) {
-          // not critical — continue
-          console.log('updateUser error (non-fatal):', err);
-        }
-
-        // If signup requires email confirmation, inform the user
-        if (!data?.user) {
-          setInfoMsg('Registration successful. Please check your email to confirm your account.');
-          // still you might want to route them to an "awaiting confirmation" screen,
-          // but we'll keep them on this page with info message.
-          setLoading(false);
-          return;
-        }
-
-        // If user created and session exists, route into the app:
+        router.replace('/(tabs)'); // go into app
+      }
+    } else {
+      // REGISTER
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name }, // store name in metadata
+        },
+      });
+      if (error) {
+        setError(error.message);
+      } else {
         router.replace('/(tabs)');
       }
-    } catch (err: any) {
-      console.log('Auth error', err);
-      setErrorMsg(err?.message ?? 'An unexpected error occurred');
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleGuest = () => {
-    // fallback: allow guest navigation if you want
+    // Guest login just skips supabase
     router.replace('/(tabs)');
   };
 
@@ -112,87 +50,58 @@ export default function LoginScreen() {
       <StatusBar barStyle="light-content" backgroundColor="#1A0A05" />
       <LinearGradient colors={['#1A0A05', '#3B1E17']} style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.content}
-          >
+          <View style={styles.content}>
             <Text style={styles.appTitle}>FluXshorts</Text>
 
-            {/* Tab switch */}
-            <View style={styles.tabRow}>
-              <TouchableOpacity
-                style={[styles.tabButton, mode === 'login' && styles.tabActive]}
-                onPress={() => { setMode('login'); resetMessages(); }}
-              >
-                <Text style={[styles.tabText, mode === 'login' && styles.tabTextActive]}>Login</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.tabButton, mode === 'register' && styles.tabActive]}
-                onPress={() => { setMode('register'); resetMessages(); }}
-              >
-                <Text style={[styles.tabText, mode === 'register' && styles.tabTextActive]}>Register</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Form */}
             <View style={styles.form}>
-              {mode === 'register' && (
+              {!isLogin && (
                 <TextInput
-                  placeholder="Full name"
-                  placeholderTextColor="#c7c7c7"
+                  placeholder="Full Name"
+                  placeholderTextColor="#aaa"
                   style={styles.input}
                   value={name}
                   onChangeText={setName}
-                  autoCapitalize="words"
-                  returnKeyType="next"
                 />
               )}
-
               <TextInput
                 placeholder="Email"
-                placeholderTextColor="#c7c7c7"
+                placeholderTextColor="#aaa"
                 style={styles.input}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
                 value={email}
                 onChangeText={setEmail}
-                returnKeyType="next"
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
-
               <TextInput
                 placeholder="Password"
-                placeholderTextColor="#c7c7c7"
+                placeholderTextColor="#aaa"
                 style={styles.input}
-                secureTextEntry
                 value={password}
                 onChangeText={setPassword}
-                returnKeyType="done"
+                secureTextEntry
               />
 
-              {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
-              {infoMsg ? <Text style={styles.infoText}>{infoMsg}</Text> : null}
+              {error ? <Text style={styles.error}>{error}</Text> : null}
 
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={handleAuth}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.primaryButtonText}>
-                    {mode === 'login' ? 'Login' : 'Create account'}
-                  </Text>
-                )}
+              <TouchableOpacity style={styles.authButton} onPress={handleAuth}>
+                <Text style={styles.authButtonText}>
+                  {isLogin ? 'Login' : 'Register'}
+                </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.guestButton} onPress={handleGuest}>
-                <Text style={styles.guestText}>Continue as Guest</Text>
+              <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
+                <Text style={styles.toggleText}>
+                  {isLogin ? "Don't have an account? Register" : 'Already have an account? Login'}
+                </Text>
               </TouchableOpacity>
             </View>
-          </KeyboardAvoidingView>
+
+            <View style={styles.guestContainer}>
+              <TouchableOpacity style={styles.guestButton} onPress={handleGuest}>
+                <Text style={styles.guestText}>Login as Guest</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </SafeAreaView>
       </LinearGradient>
     </>
@@ -202,65 +111,47 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
-  content: { flex: 1, paddingHorizontal: 24, justifyContent: 'center' },
-  appTitle: { fontSize: 28, fontWeight: 'bold', color: '#FF8C00', textAlign: 'center', marginBottom: 28 },
-  tabRow: { flexDirection: 'row', alignSelf: 'center', marginBottom: 20 },
-  tabButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    backgroundColor: 'transparent',
-    marginHorizontal: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+  content: { flex: 1, paddingHorizontal: 20, justifyContent: 'center' },
+  appTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FF8C00',
+    textAlign: 'center',
+    paddingTop: 40,
+    paddingBottom: 20,
   },
-  tabActive: {
+  form: { gap: 12, paddingHorizontal: 20 },
+  input: {
+    backgroundColor: '#222',
+    color: '#fff',
+    padding: 14,
+    borderRadius: 8,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  error: { color: 'red', textAlign: 'center', marginVertical: 8 },
+  authButton: {
     backgroundColor: '#FF8C00',
+    paddingVertical: 14,
+    borderRadius: 8,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  authButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  toggleText: {
+    color: '#FF8C00',
+    textAlign: 'center',
+    marginTop: 12,
+    fontSize: 14,
+  },
+  guestContainer: { marginTop: 30, alignItems: 'center' },
+  guestButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    borderWidth: 1,
     borderColor: '#FF8C00',
   },
-  tabText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  tabTextActive: {
-    color: '#000',
-    fontWeight: '700',
-  },
-  form: {
-    marginTop: 8,
-    alignItems: 'center',
-  },
-  input: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginBottom: 12,
-    color: '#fff',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  primaryButton: {
-    marginTop: 8,
-    backgroundColor: '#1d4ed8',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    width: '100%',
-    maxWidth: 420,
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  guestButton: {
-    marginTop: 12,
-  },
-  guestText: { color: '#c7c7c7' },
-  errorText: { color: '#ff6b6b', marginTop: 6 },
-  infoText: { color: '#ffd27a', marginTop: 6 },
+  guestText: { color: '#fff', fontSize: 16 },
 });
