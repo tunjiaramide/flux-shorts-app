@@ -5,23 +5,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LogOut, ChevronRight } from 'lucide-react-native';
 import { router } from 'expo-router';
 import CustomFooter from '@/components/CustomFooter';
-import { supabase } from '@/config/supabase'; // your config file
+import { getCurrentUser, signOut } from '@/config/supabase'; // use helpers
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    // Get the current session from Supabase
-    const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data?.user || null);
+    const fetchUser = async () => {
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
     };
-
-    getUser();
+    fetchUser();
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     router.replace('/login');
   };
 

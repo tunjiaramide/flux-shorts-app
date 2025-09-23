@@ -3,10 +3,10 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar } from '
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '@/config/supabase'; // your Supabase config
+import { signUp, signIn, getCurrentUser } from '@/config/supabase'; // import helpers
 
 export default function LoginScreen() {
-  const [isLogin, setIsLogin] = useState(true); // toggle between login/register
+  const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,34 +14,26 @@ export default function LoginScreen() {
 
   const handleAuth = async () => {
     setError('');
-
-    if (isLogin) {
-      // LOGIN
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setError(error.message);
+    try {
+      if (isLogin) {
+        // LOGIN
+        await signIn(email, password);
       } else {
+        // REGISTER
+        await signUp(email, password, name);
+      }
+
+      // ✅ check current user
+      const user = await getCurrentUser();
+      if (user) {
         router.replace('/(tabs)'); // go into app
       }
-    } else {
-      // REGISTER
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { name }, // store name in metadata
-        },
-      });
-      if (error) {
-        setError(error.message);
-      } else {
-        router.replace('/(tabs)');
-      }
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
   const handleGuest = () => {
-    // Guest login just skips supabase
     router.replace('/(tabs)');
   };
 
