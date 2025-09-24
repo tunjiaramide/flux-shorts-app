@@ -1,24 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomFooter from '@/components/CustomFooter';
-import { useRouter } from 'expo-router';
+import PaystackWebView from '@hurshore/react-native-paystack-webview';
+import { supabase } from '@/config/supabase';
 
 const Subscribe = () => {
-  const router = useRouter();
+  const [showPaystack, setShowPaystack] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
-  const handleSubscribe = () => {
-    // 🔹 For now, just redirect to Paystack page placeholder
-    // Later we’ll integrate Paystack SDK / WebView here
-    //router.push('/paystack');
-  };
+  React.useEffect(() => {
+    // fetch current user from supabase
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user?.email) {
+        setUserEmail(data.user.email);
+      }
+    };
+    getUser();
+  }, []);
 
   return (
-    <LinearGradient
-      colors={['#7c2d12', '#1a1a1a']}
-      style={styles.container}
-    >
+    <LinearGradient colors={['#7c2d12', '#1a1a1a']} style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.content}>
           <Text style={styles.appTitle}>FluxShorts</Text>
@@ -30,7 +34,7 @@ const Subscribe = () => {
 
             <TouchableOpacity
               style={styles.subscribeButton}
-              onPress={handleSubscribe}
+              onPress={() => setShowPaystack(true)}
             >
               <Text style={styles.subscribeButtonText}>
                 Subscribe with ₦10,000
@@ -38,6 +42,25 @@ const Subscribe = () => {
             </TouchableOpacity>
           </View>
         </View>
+
+        {showPaystack && (
+          <PaystackWebView
+            paystackKey="pk_test_xxxxxxxxxxxxx" // replace with your public key
+            amount={10000}
+            billingEmail={userEmail || 'guest@example.com'}
+            billingName="FluxShorts User"
+            billingMobile="08012345678"
+            activityIndicatorColor="green"
+            onCancel={() => setShowPaystack(false)}
+            onSuccess={(res: any) => {
+              console.log('Payment success 🎉', res);
+              setShowPaystack(false);
+              // ✅ Here you can update Supabase "subscriptions" table or flag user as paid
+            }}
+            autoStart={true}
+          />
+        )}
+
         <CustomFooter />
       </SafeAreaView>
     </LinearGradient>
@@ -47,12 +70,8 @@ const Subscribe = () => {
 export default Subscribe;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
   content: {
     flex: 1,
     paddingHorizontal: 20,
@@ -76,22 +95,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
-  planTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: 12,
-  },
-  planPrice: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fbbf24',
-  },
-  planDuration: {
-    fontSize: 16,
-    color: '#d1d5db',
-    marginBottom: 20,
-  },
+  planTitle: { fontSize: 20, fontWeight: '600', color: '#fff', marginBottom: 12 },
+  planPrice: { fontSize: 32, fontWeight: 'bold', color: '#fbbf24' },
+  planDuration: { fontSize: 16, color: '#d1d5db', marginBottom: 20 },
   subscribeButton: {
     backgroundColor: '#1d4ed8',
     borderRadius: 12,
@@ -100,9 +106,5 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
-  subscribeButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
+  subscribeButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
 });
