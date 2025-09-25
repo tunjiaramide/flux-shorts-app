@@ -22,20 +22,12 @@ export default function LoginScreen() {
         // REGISTER
         await signUp(email, password, name);
       }
-
-      // ✅ check current user
-      const user = await getCurrentUser();
-      if (user) {
-        router.replace('/(tabs)'); // go into app
-      }
+     
     } catch (err: any) {
       setError(err.message);
     }
   };
 
-  const handleGuest = () => {
-    router.replace('/(tabs)');
-  };
 
   return (
     <>
@@ -85,12 +77,6 @@ export default function LoginScreen() {
                 <Text style={styles.toggleText}>
                   {isLogin ? "Don't have an account? Register" : 'Already have an account? Login'}
                 </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.guestContainer}>
-              <TouchableOpacity style={styles.guestButton} onPress={handleGuest}>
-                <Text style={styles.guestText}>Login as Guest</Text>
               </TouchableOpacity>
             </View>
           </View>

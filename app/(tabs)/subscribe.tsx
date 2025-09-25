@@ -52,16 +52,39 @@ export default function Subscribe() {
         metadata: {
           name: userName,
         },
-        onSuccess: (res: any) => {
+        onSuccess: async (res: any) => {
           setLoading(false);
           // res contains the transaction details from Paystack
           console.log('Paystack success:', res);
 
-          // TODO: later persist subscription info to Supabase
+          try {
+          // Get logged-in user
+          const { data: { user }, error } = await supabase.auth.getUser();
+          if (error) throw error;
+          if (!user) throw new Error("No user logged in");
 
-          // Redirect to your main movies/tabs page
-          // Adjust the path if your all-movies route is different
-          router.replace('/(tabs)');
+          // Save subscription
+          const { error: insertError } = await supabase.from("subscriptions").insert([
+            {
+              user_id: user.id,
+              email: user.email,
+              paid: true,
+              reference: res.reference, // from Paystack
+            },
+          ]);
+
+         if (insertError) {
+            console.error("Supabase insert error:", insertError);
+            Alert.alert("Database Error", insertError.message || "Unknown DB error");
+            return;
+          }
+
+          Alert.alert("Success", "Subscription activated 🎉");
+          router.replace("/(tabs)");
+        } catch (dbError: any) {
+          console.error("Failed to save subscription:", dbError.message);
+          Alert.alert("Payment saved locally, but failed to persist.");
+        }
         },
         onCancel: () => {
           setLoading(false);

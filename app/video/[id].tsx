@@ -22,7 +22,7 @@ import CustomFooter from '@/components/CustomFooter';
 import { movieService } from '@/services/movieService';
 import { Movie } from '@/types/movie';
 
-import { isPaidUser } from '@/config/subscription';
+import { checkIsPaidUser } from '@/config/subscription';
 import { useEventListener } from 'expo'; // <-- event hook for player events
 
 export default function VideoScreen() {
@@ -36,8 +36,6 @@ export default function VideoScreen() {
   // paywall state + guard so it fires only once
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallTriggered, setPaywallTriggered] = useState(false);
-
-  const isPaidUser = false; // 🔹 test toggle
 
   // create player and configure it
   const player = useVideoPlayer(videoUrl as string, (player) => {
@@ -65,7 +63,7 @@ export default function VideoScreen() {
         ? evt.position
         : null;
 
-    if (seconds !== null && seconds >= 45 && !isPaidUser && !paywallTriggered) {
+    if (seconds !== null && seconds >= 45 && !checkIsPaidUser && !paywallTriggered) {
       setPaywallTriggered(true);
       try {
         player.pause();
