@@ -33,7 +33,6 @@ export default function ProfileScreen() {
           <Text style={styles.appTitle}>FluxShorts</Text>
 
           <View style={styles.profileSection}>
-            <View style={styles.avatar} />
             {user ? (
               <>
                 <Text style={styles.userName}>
