@@ -36,6 +36,7 @@ export default function VideoScreen() {
   // paywall state + guard so it fires only once
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallTriggered, setPaywallTriggered] = useState(false);
+  const [seconds, setSeconds] = useState<number | null>(null);
 
   // create player and configure it
   const player = useVideoPlayer(videoUrl as string, (player) => {
@@ -63,16 +64,29 @@ export default function VideoScreen() {
         ? evt.position
         : null;
 
-    if (seconds !== null && seconds >= 45 && !checkIsPaidUser && !paywallTriggered) {
-      setPaywallTriggered(true);
-      try {
-        player.pause();
-      } catch (e) {
-        console.log("Error pausing player for paywall:", e);
-      }
-      setShowPaywall(true);
-    }
+        setSeconds(seconds);
   });
+
+  useEffect(() => {
+      if (seconds !== null && seconds >= 45 && !paywallTriggered) {
+        const checkPaywall = async () => {
+          const isPaid = await checkIsPaidUser();
+          console.log("⏳ seconds:", seconds, "isPaid?", isPaid);
+
+          if (!isPaid) {
+            setPaywallTriggered(true);
+            try {
+              player.pause();
+            } catch (e) {
+              console.log("Error pausing player for paywall:", e);
+            }
+            setShowPaywall(true);
+          }
+        };
+
+        checkPaywall();
+      }
+    }, [seconds, paywallTriggered]);
 
   useEffect(() => {
     loadRecentMovies();
